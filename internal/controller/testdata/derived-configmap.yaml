@@ -1,0 +1,9 @@
+#@ load("@ytt:data", "data")
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: derived-configmap
+  namespace: #@ data.values.metadata.namespace
+data:
+  namespace: #@ data.values.metadata.namespace

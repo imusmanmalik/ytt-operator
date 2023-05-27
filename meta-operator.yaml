@@ -1,0 +1,4 @@
+reconcilers:
+- version: v1
+  kind: Pod
+  dir: internal/controller/testdata
