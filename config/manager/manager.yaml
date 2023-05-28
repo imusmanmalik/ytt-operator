@@ -70,7 +70,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: damianpeckett/meta-operator:latest
+        image: ghcr.io/dpeckett/meta-operator:latest
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
