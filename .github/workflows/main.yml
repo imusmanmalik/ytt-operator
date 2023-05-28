@@ -32,6 +32,7 @@ jobs:
     - name: Run Tests
       run: |
         sudo curl -fsL -o /usr/local/bin/ytt https://github.com/carvel-dev/ytt/releases/download/v0.45.1/ytt-linux-amd64
+        sudo chmod +x /usr/local/bin/ytt
         make test
 
   push:
