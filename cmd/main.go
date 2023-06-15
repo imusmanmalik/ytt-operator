@@ -22,31 +22,21 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
-	"gopkg.in/yaml.v3"
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/dpeckett/meta-operator/internal/controller"
+	"github.com/dpeckett/ytt-operator/api"
+	yttoperatorv1alpha1 "github.com/dpeckett/ytt-operator/api/v1alpha1"
+	"github.com/dpeckett/ytt-operator/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
-
-type MetaOperatorConfig struct {
-	Reconcilers []MetaOperatorReconcilerConfig `yaml:"reconcilers"`
-}
-
-type MetaOperatorReconcilerConfig struct {
-	Group   string `yaml:"group"`
-	Version string `yaml:"version"`
-	Kind    string `yaml:"kind"`
-	Dir     string `yaml:"dir"`
-}
 
 var (
 	scheme   = runtime.NewScheme()
@@ -56,6 +46,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
+	utilruntime.Must(yttoperatorv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -70,7 +61,7 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&configPath, "config-path", "meta-operator.yaml", "Path to the config file")
+	flag.StringVar(&configPath, "config-path", "ytt-operator.yaml", "Path to the config file")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -99,31 +90,21 @@ func main() {
 		// LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "Unable to start manager")
 		os.Exit(1)
 	}
 
-	configData, err := os.ReadFile(configPath)
+	config, err := api.LoadConfig(configPath)
 	if err != nil {
-		setupLog.Error(err, "Error reading config file", "path", configPath)
-		os.Exit(1)
-	}
-
-	var config MetaOperatorConfig
-	if err := yaml.Unmarshal(configData, &config); err != nil {
-		setupLog.Error(err, "Error parsing config file", "path", configPath)
+		setupLog.Error(err, "Unable to load config")
 		os.Exit(1)
 	}
 
 	for _, reconcilerConfig := range config.Reconcilers {
-		reconciler := controller.NewMetaReconciler(mgr, schema.GroupVersionKind{
-			Group:   reconcilerConfig.Group,
-			Version: reconcilerConfig.Version,
-			Kind:    reconcilerConfig.Kind,
-		}, reconcilerConfig.Dir)
+		reconciler := controller.NewYTTReconciler(mgr, reconcilerConfig.GroupVersionKind(), reconcilerConfig.Scripts)
 
 		if err = reconciler.SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", reconcilerConfig.Kind)
+			setupLog.Error(err, "Unable to create controller", "controller", reconcilerConfig.Kind)
 			os.Exit(1)
 		}
 	}
@@ -131,17 +112,18 @@ func main() {
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
+		setupLog.Error(err, "Unable to set up health check")
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "Unable to set up ready check")
+		os.Exit(1)
+	}
+
+	setupLog.Info("Starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		setupLog.Error(err, "Problem running manager")
 		os.Exit(1)
 	}
 }

@@ -29,10 +29,17 @@ jobs:
         push: false
         tags: ghcr.io/${{ github.repository }}:latest
 
+    - name: "Create Integration Test Cluster"
+      uses: AbsaOSS/k3d-action@v2
+      with:
+        cluster-name: integration-test
+        args: --agents 1
+
     - name: Run Tests
       run: |
+        sudo curl -fsL -o /usr/local/bin/kapp https://github.com/carvel-dev/kapp/releases/download/v0.57.1/kapp-linux-amd64
         sudo curl -fsL -o /usr/local/bin/ytt https://github.com/carvel-dev/ytt/releases/download/v0.45.1/ytt-linux-amd64
-        sudo chmod +x /usr/local/bin/ytt
+        sudo chmod +x /usr/local/bin/kapp /usr/local/bin/ytt
         make test
 
   push:

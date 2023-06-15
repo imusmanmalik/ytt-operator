@@ -2,9 +2,18 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: my.domain
+domain: pecke.tt
 layout:
 - go.kubebuilder.io/v4
-projectName: meta-operator
-repo: github.com/dpeckett/meta-operator
+projectName: ytt-operator
+repo: github.com/dpeckett/ytt-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: pecke.tt
+  group: ytt-operator
+  kind: Config
+  path: github.com/dpeckett/ytt-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

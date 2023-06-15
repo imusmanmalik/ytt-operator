@@ -13,7 +13,8 @@ RUN go mod download
 
 # Copy the go source
 COPY cmd/main.go cmd/main.go
-COPY internal/controller/ internal/controller/
+COPY api/ api/
+COPY internal/ internal/
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
@@ -22,12 +23,13 @@ COPY internal/controller/ internal/controller/
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager cmd/main.go
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM alpine:3.18.0
 WORKDIR /
-RUN wget -O /usr/bin/ytt https://github.com/carvel-dev/ytt/releases/download/v0.45.1/ytt-linux-amd64 \
-  && chmod +x /usr/bin/ytt
+
+ADD https://github.com/carvel-dev/kapp/releases/download/v0.57.1/kapp-linux-amd64 /usr/bin/kapp
+ADD https://github.com/carvel-dev/ytt/releases/download/v0.45.1/ytt-linux-amd64 /usr/bin/ytt
+RUN chmod +x /usr/bin/kapp /usr/bin/ytt
+
 COPY --from=builder /workspace/manager .
 USER 65532:65532
 

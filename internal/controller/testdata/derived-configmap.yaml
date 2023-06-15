@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: derived-configmap
+  name: #@ "derived-configmap-" + data.values.metadata.name
   namespace: #@ data.values.metadata.namespace
 data:
   namespace: #@ data.values.metadata.namespace
