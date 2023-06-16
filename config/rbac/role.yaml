@@ -5,11 +5,15 @@ metadata:
   creationTimestamp: null
   name: manager-role
 rules:
-- resources:
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
   - get
-- resources:
+- apiGroups:
+  - ""
+  resources:
   - pods/status
   verbs:
   - get

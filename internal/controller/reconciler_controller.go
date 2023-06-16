@@ -45,8 +45,8 @@ type ReconcilerReconciler struct {
 //+kubebuilder:rbac:groups=ytt-operator.pecke.tt,resources=reconcilers/finalizers,verbs=update
 
 // So we can manage the child reconcilers.
-//+kubebuilder:rbac:resources=pods,verbs=get
-//+kubebuilder:rbac:resources=pods/status,verbs=get
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get
+//+kubebuilder:rbac:groups="",resources=pods/status,verbs=get
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
 
