@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -25,14 +26,16 @@ import (
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/dpeckett/ytt-operator/api"
+	"github.com/dpeckett/ytt-operator/api/v1alpha1"
 	yttoperatorv1alpha1 "github.com/dpeckett/ytt-operator/api/v1alpha1"
 	"github.com/dpeckett/ytt-operator/internal/controller"
 	//+kubebuilder:scaffold:imports
@@ -54,14 +57,15 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
-	var configPath string
+	var reconcilerName string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&configPath, "config-path", "ytt-operator.yaml", "Path to the config file")
+	flag.StringVar(&reconcilerName, "reconciler-name", "",
+		"The name of the reconciler configuration to use, expected to be present in the same namespace as the operator.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -94,17 +98,42 @@ func main() {
 		os.Exit(1)
 	}
 
-	config, err := api.LoadConfig(configPath)
-	if err != nil {
-		setupLog.Error(err, "Unable to load config")
-		os.Exit(1)
-	}
+	ctx := context.Background()
+	ctrl.LoggerInto(ctx, setupLog)
 
-	for _, reconcilerConfig := range config.Reconcilers {
-		reconciler := controller.NewYTTReconciler(mgr, reconcilerConfig.GroupVersionKind(), reconcilerConfig.Scripts)
+	if reconcilerName != "" {
+		var reconcilerConfig v1alpha1.Reconciler
+		err := mgr.GetAPIReader().Get(ctx, types.NamespacedName{
+			Name:      reconcilerName,
+			Namespace: os.Getenv("POD_NAMESPACE"),
+		}, &reconcilerConfig)
+		if err != nil {
+			setupLog.Error(err, "Unable to retrieve reconciler configuration")
+			os.Exit(1)
+		}
 
-		if err = reconciler.SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "Unable to create controller", "controller", reconcilerConfig.Kind)
+		for _, gvk := range reconcilerConfig.Spec.For {
+			// Register the reconciler for each GVK.
+			if err := controller.NewYTTReconciler(mgr, gvk.GroupVersionKind(), reconcilerConfig.Spec.Scripts).SetupWithManager(mgr); err != nil {
+				setupLog.Error(err, "unable to create controller", "controller", gvk.GroupVersionKind().String())
+				os.Exit(1)
+			}
+		}
+	} else {
+		// Will be used as a template for the child reconcilers.
+		var parent corev1.Pod
+		err := mgr.GetAPIReader().Get(ctx, types.NamespacedName{
+			Name:      os.Getenv("POD_NAME"),
+			Namespace: os.Getenv("POD_NAMESPACE"),
+		}, &parent)
+		if err != nil {
+			setupLog.Error(err, "Unable to retrieve pod information")
+			os.Exit(1)
+		}
+
+		// Register as an operator of operators.
+		if err := controller.NewReconcilerReconciler(mgr, &parent).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Reconciler")
 			os.Exit(1)
 		}
 	}

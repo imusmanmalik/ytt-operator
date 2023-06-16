@@ -4,4 +4,58 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: manager-role
-rules: []
+rules:
+- resources:
+  - pods
+  verbs:
+  - get
+- resources:
+  - pods/status
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ytt-operator.pecke.tt
+  resources:
+  - reconcilers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ytt-operator.pecke.tt
+  resources:
+  - reconcilers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ytt-operator.pecke.tt
+  resources:
+  - reconcilers/status
+  verbs:
+  - get
+  - patch
+  - update

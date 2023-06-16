@@ -34,8 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const finalizer = "ytt-operator.damian.pecke.tt"
-
 type YTTReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
@@ -84,24 +82,16 @@ func (r *YTTReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 		logger.Info("Removing finalizer")
 
-		obj.SetFinalizers(remove(obj.GetFinalizers(), finalizer))
-
-		if err := r.Update(ctx, &obj); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update object: %w", err)
+		if err := removeFinalizer(ctx, r.Client, &obj); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 
 		return ctrl.Result{}, nil
 	}
 
 	// Add finalizer if it's not already present.
-	if !contains(obj.GetFinalizers(), finalizer) {
-		logger.Info("Adding finalizer")
-
-		obj.SetFinalizers(append(obj.GetFinalizers(), finalizer))
-
-		if err := r.Update(ctx, &obj); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update object: %w", err)
-		}
+	if err := addFinalizer(ctx, r.Client, &obj); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 	}
 
 	objYAML, err := yaml.Marshal(obj.Object)
@@ -149,26 +139,4 @@ func (r *YTTReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&obj).
 		Complete(r)
-}
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-
-	return false
-}
-
-func remove(s []string, e string) []string {
-	var result []string
-
-	for _, a := range s {
-		if a != e {
-			result = append(result, a)
-		}
-	}
-
-	return result
 }

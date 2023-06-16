@@ -11,9 +11,18 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
+  controller: true
   domain: pecke.tt
   group: ytt-operator
-  kind: Config
+  kind: Reconciler
+  path: github.com/dpeckett/ytt-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: pecke.tt
+  group: ytt-operator
+  kind: TestResource
   path: github.com/dpeckett/ytt-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

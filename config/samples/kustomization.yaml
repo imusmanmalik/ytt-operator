@@ -1,4 +1,6 @@
 ## Append samples of your project ##
 resources:
 - ytt-operator_v1alpha1_config.yaml
+- ytt-operator_v1alpha1_reconciler.yaml
+- ytt-operator_v1alpha1_testresource.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

@@ -18,6 +18,8 @@ package controller_test
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -27,12 +29,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -40,7 +44,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func TestYTTReconciler(t *testing.T) {
+func TestReconcilerReconciler(t *testing.T) {
 	logConfig := zap.NewDevelopmentConfig()
 	logConfig.DisableStacktrace = true
 
@@ -61,7 +65,7 @@ func TestYTTReconciler(t *testing.T) {
 	crdClientset, err := apiextensionsclientset.NewForConfig(config)
 	require.NoError(t, err)
 
-	crd, err := loadCRD("../../config/crd/bases/ytt-operator.pecke.tt_testresources.yaml")
+	crd, err := loadCRD("../../config/crd/bases/ytt-operator.pecke.tt_reconcilers.yaml")
 	require.NoError(t, err)
 
 	existing, err := crdClientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crd.Name, metav1.GetOptions{})
@@ -78,7 +82,7 @@ func TestYTTReconciler(t *testing.T) {
 	require.NoError(t, err)
 
 	scheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, appsv1.AddToScheme(scheme))
 	require.NoError(t, v1alpha1.AddToScheme(scheme))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -87,9 +91,22 @@ func TestYTTReconciler(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	gvk := schema.GroupVersionKind{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Kind: "TestResource"}
+	parent := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "default",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "manager",
+					Image: "k8s.gcr.io/pause:3.9",
+				},
+			},
+		},
+	}
 
-	r := controller.NewYTTReconciler(mgr, gvk, []string{"testdata"})
+	r := controller.NewReconcilerReconciler(mgr, parent)
 	err = r.SetupWithManager(mgr)
 	require.NoError(t, err)
 
@@ -99,18 +116,24 @@ func TestYTTReconciler(t *testing.T) {
 		}
 	}()
 
-	t.Run("Test object creation", func(t *testing.T) {
-		obj := &v1alpha1.TestResource{
+	t.Run("Test child reconciler creation", func(t *testing.T) {
+		obj := &v1alpha1.Reconciler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",
 				Namespace: "default",
 			},
-			Spec: v1alpha1.TestResourceSpec{
-				Foo: "bar",
+			Spec: v1alpha1.ReconcilerSpec{
+				For: []metav1.TypeMeta{
+					{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+				},
+				Scripts: []string{"test"},
 			},
 		}
 
-		err = r.Client.Create(ctx, obj)
+		err := r.Client.Create(ctx, obj)
 		require.NoError(t, err)
 
 		defer func() {
@@ -132,10 +155,10 @@ func TestYTTReconciler(t *testing.T) {
 			}
 		}()
 
-		var cm *corev1.ConfigMap
+		// Wait for the deployment to be created.
+		var d *appsv1.Deployment
 		err = wait.PollImmediate(100*time.Millisecond, 10*time.Second, func() (bool, error) {
-			cm, err = clientset.CoreV1().ConfigMaps("default").Get(ctx,
-				"derived-configmap-test", metav1.GetOptions{})
+			d, err = clientset.AppsV1().Deployments("default").Get(ctx, "ytt-operator-test", metav1.GetOptions{})
 			if err != nil {
 				return false, nil
 			}
@@ -143,6 +166,27 @@ func TestYTTReconciler(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		assert.Equal(t, "default", cm.Data["namespace"])
+		// Check that the deployment has the correct arguments.
+		assert.Equal(t, "--reconciler-name=test", d.Spec.Template.Spec.Containers[0].Args[0], "Reconciler name should be set")
 	})
+}
+
+func loadCRD(path string) (*apiextensionsv1.CustomResourceDefinition, error) {
+	crdYAML, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load CRD: %w", err)
+	}
+
+	// construct a new scheme and add the types we need
+	scheme := runtime.NewScheme()
+	if err := apiextensionsv1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to construct scheme: %w", err)
+	}
+
+	crd, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(crdYAML, nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode CRD: %w", err)
+	}
+
+	return crd.(*apiextensionsv1.CustomResourceDefinition), nil
 }

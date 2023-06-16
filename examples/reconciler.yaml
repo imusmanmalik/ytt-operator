@@ -1,0 +1,11 @@
+# An example reconciler that will watch for Deployment resources
+apiVersion: ytt-operator.pecke.tt/v1alpha1
+kind: Reconciler
+metadata:
+  name: deployment-reconciler
+spec:
+  for:
+  - apiVersion: apps/v1
+    kind: Deployment
+  scripts:
+  - internal/controller/testdata

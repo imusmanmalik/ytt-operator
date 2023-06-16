@@ -1,12 +1,12 @@
 apiVersion: ytt-operator.pecke.tt/v1alpha1
-kind: Config
+kind: TestResource
 metadata:
   labels:
-    app.kubernetes.io/name: config
-    app.kubernetes.io/instance: config-sample
+    app.kubernetes.io/name: testresource
+    app.kubernetes.io/instance: testresource-sample
     app.kubernetes.io/part-of: ytt-operator
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: ytt-operator
-  name: config-sample
+  name: testresource-sample
 spec:
   # TODO(user): Add fields here

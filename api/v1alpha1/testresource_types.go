@@ -20,22 +20,34 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +k8s:deepcopy-gen=true
-type Reconciler struct {
-	metav1.TypeMeta `json:",inline"`
-	// Scripts is a list of yaml files to pass to ytt.
-	Scripts []string `json:"scripts,omitempty"`
+type TestResourceSpec struct {
+	Foo string `json:"foo,omitempty"`
 }
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type Config struct {
+type TestResourceStatus struct {
+}
+
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+
+// TestResource is used for testing the ytt controller.
+type TestResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Reconcilers is a list of reconcilers to create.
-	Reconcilers []Reconciler `json:"reconcilers,omitempty"`
+
+	Spec   TestResourceSpec   `json:"spec,omitempty"`
+	Status TestResourceStatus `json:"status,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+
+// TestResourceList is used for testing the ytt controller.
+type TestResourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []TestResource `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Config{})
+	SchemeBuilder.Register(&TestResource{}, &TestResourceList{})
 }
