@@ -26,8 +26,11 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 FROM alpine:3.18.0
 WORKDIR /
 
-ADD https://github.com/carvel-dev/kapp/releases/download/v0.57.1/kapp-linux-amd64 /usr/bin/kapp
-ADD https://github.com/carvel-dev/ytt/releases/download/v0.45.1/ytt-linux-amd64 /usr/bin/ytt
+ARG TARGETOS
+ARG TARGETARCH
+
+ADD https://github.com/carvel-dev/kapp/releases/download/v0.57.1/kapp-linux-${TARGETARCH} /usr/bin/kapp
+ADD https://github.com/carvel-dev/ytt/releases/download/v0.45.1/ytt-linux-${TARGETARCH} /usr/bin/ytt
 RUN chmod +x /usr/bin/kapp /usr/bin/ytt
 
 COPY --from=builder /workspace/manager .
