@@ -81,7 +81,7 @@ func (r *ReconcilerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		err := r.Client.Delete(ctx, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ytt-operator-" + obj.GetName(),
-				Namespace: r.Parent.GetNamespace(),
+				Namespace: obj.GetNamespace(),
 			},
 		})
 		if err != nil {
@@ -106,7 +106,7 @@ func (r *ReconcilerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	logger.Info("Reconciling child reconciler")
 
-	child := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "ytt-operator-" + obj.GetName(), Namespace: r.Parent.GetNamespace()}}
+	child := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "ytt-operator-" + obj.GetName(), Namespace: obj.GetNamespace()}}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, child, func() error {
 		podSpec := r.Parent.Spec.DeepCopy()
 		podSpec.ServiceAccountName = obj.Spec.ServiceAccountName
