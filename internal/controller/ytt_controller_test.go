@@ -89,7 +89,7 @@ func TestYTTReconciler(t *testing.T) {
 
 	gvk := schema.GroupVersionKind{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Kind: "TestResource"}
 
-	r := controller.NewYTTReconciler(mgr, gvk, []string{"testdata"})
+	r := controller.NewYTTReconciler(mgr, gvk, "testdata")
 	err = r.SetupWithManager(mgr)
 	require.NoError(t, err)
 

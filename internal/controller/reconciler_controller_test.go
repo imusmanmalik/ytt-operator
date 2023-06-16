@@ -18,6 +18,7 @@ package controller_test
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"testing"
@@ -129,7 +130,12 @@ func TestReconcilerReconciler(t *testing.T) {
 						APIVersion: "apps/v1",
 					},
 				},
-				Scripts: []string{"test"},
+				Scripts: []v1alpha1.ReconcilerScriptSpec{
+					{
+						Name:    "test.yaml",
+						Encoded: base64.StdEncoding.EncodeToString([]byte("foo: bar")),
+					},
+				},
 			},
 		}
 

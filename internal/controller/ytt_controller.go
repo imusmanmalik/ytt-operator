@@ -36,17 +36,17 @@ import (
 
 type YTTReconciler struct {
 	client.Client
-	Scheme  *runtime.Scheme
-	gvk     schema.GroupVersionKind
-	scripts []string
+	Scheme     *runtime.Scheme
+	gvk        schema.GroupVersionKind
+	scriptsDir string
 }
 
-func NewYTTReconciler(mgr ctrl.Manager, gvk schema.GroupVersionKind, scripts []string) *YTTReconciler {
+func NewYTTReconciler(mgr ctrl.Manager, gvk schema.GroupVersionKind, scriptsDir string) *YTTReconciler {
 	return &YTTReconciler{
-		Client:  mgr.GetClient(),
-		Scheme:  mgr.GetScheme(),
-		gvk:     gvk,
-		scripts: scripts,
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		gvk:        gvk,
+		scriptsDir: scriptsDir,
 	}
 }
 
@@ -99,15 +99,9 @@ func (r *YTTReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, fmt.Errorf("failed to marshal object: %w", err)
 	}
 
-	var args []string
-	for _, script := range r.scripts {
-		args = append(args, "-f", script)
-	}
-	args = append(args, "-f", "-")
-
 	logger.Info("Invoking ytt")
 
-	cmd := exec.CommandContext(ctx, "ytt", args...)
+	cmd := exec.CommandContext(ctx, "ytt", "-f", r.scriptsDir, "-f", "-")
 	cmd.Stdin = strings.NewReader("#@data/values\n---\n" + string(objYAML))
 	out, err := cmd.CombinedOutput()
 	if err != nil {

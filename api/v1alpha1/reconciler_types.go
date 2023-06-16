@@ -20,10 +20,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ReconcilerScriptSpec struct {
+	// Name is the name of the script.
+	Name string `json:"name"`
+	// Encoded is a base64 encoded string of the script. We use
+	// base64 encoding here to prevent issues with ytt markers in
+	// the script getting prematurely evaluated.
+	Encoded string `json:"encoded"`
+}
+
 // ReconcilerSpec defines the desired state of Reconciler
 type ReconcilerSpec struct {
-	For     []metav1.TypeMeta `json:"for,omitempty"`
-	Scripts []string          `json:"scripts,omitempty"`
+	// For is a list of resource GVKs to reconcile.
+	For []metav1.TypeMeta `json:"for,omitempty"`
+	// Scripts is a list of scripts to execute for this reconciler.
+	Scripts []ReconcilerScriptSpec `json:"scripts,omitempty"`
 }
 
 // ReconcilerStatus defines the observed state of Reconciler

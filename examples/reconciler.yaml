@@ -8,4 +8,10 @@ spec:
   - apiVersion: apps/v1
     kind: Deployment
   scripts:
-  - internal/controller/testdata
+  - name: configmap.yaml
+    encoded: |
+      I0AgbG9hZCgiQHl0dDpkYXRhIiwgImRhdGEiKQotLS0KYXBpVmVyc2lvbjogdjEKa2luZDogQ29u
+      ZmlnTWFwCm1ldGFkYXRhOgogIG5hbWU6ICNAICJkZXJpdmVkLWNvbmZpZ21hcC0iICsgZGF0YS52
+      YWx1ZXMubWV0YWRhdGEubmFtZQogIG5hbWVzcGFjZTogI0AgZGF0YS52YWx1ZXMubWV0YWRhdGEu
+      bmFtZXNwYWNlCmRhdGE6CiAgbmFtZXNwYWNlOiAjQCBkYXRhLnZhbHVlcy5tZXRhZGF0YS5uYW1l
+      c3BhY2U=

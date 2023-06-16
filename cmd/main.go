@@ -18,8 +18,10 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"flag"
 	"os"
+	"path/filepath"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -112,9 +114,30 @@ func main() {
 			os.Exit(1)
 		}
 
+		scriptsDir, err := os.MkdirTemp("", "ytt-operator")
+		if err != nil {
+			setupLog.Error(err, "Unable to create temporary scripts directory")
+			os.Exit(1)
+		}
+		defer os.RemoveAll(scriptsDir)
+
+		// Write the scripts out to a temporary directory.
+		for _, s := range reconcilerConfig.Spec.Scripts {
+			data, err := base64.StdEncoding.DecodeString(s.Encoded)
+			if err != nil {
+				setupLog.Error(err, "Unable to decode script")
+				os.Exit(1)
+			}
+
+			if err := os.WriteFile(filepath.Join(scriptsDir, s.Name), data, 0o644); err != nil {
+				setupLog.Error(err, "Unable to write script to temporary directory")
+				os.Exit(1)
+			}
+		}
+
 		for _, gvk := range reconcilerConfig.Spec.For {
 			// Register the reconciler for each GVK.
-			if err := controller.NewYTTReconciler(mgr, gvk.GroupVersionKind(), reconcilerConfig.Spec.Scripts).SetupWithManager(mgr); err != nil {
+			if err := controller.NewYTTReconciler(mgr, gvk.GroupVersionKind(), scriptsDir).SetupWithManager(mgr); err != nil {
 				setupLog.Error(err, "unable to create controller", "controller", gvk.GroupVersionKind().String())
 				os.Exit(1)
 			}
