@@ -4,6 +4,7 @@ kind: Reconciler
 metadata:
   name: deployment-reconciler
 spec:
+  serviceAccountName: default
   for:
   - apiVersion: apps/v1
     kind: Deployment

@@ -31,6 +31,8 @@ type ReconcilerScriptSpec struct {
 
 // ReconcilerSpec defines the desired state of Reconciler
 type ReconcilerSpec struct {
+	// ServiceAccountName is the name of the service account to use for the reconciler.
+	ServiceAccountName string `json:"serviceAccountName"`
 	// For is a list of resource GVKs to reconcile.
 	For []metav1.TypeMeta `json:"for,omitempty"`
 	// Scripts is a list of scripts to execute for this reconciler.

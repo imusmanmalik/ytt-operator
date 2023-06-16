@@ -109,6 +109,8 @@ func (r *ReconcilerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	child := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "ytt-operator-" + obj.GetName(), Namespace: r.Parent.GetNamespace()}}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, child, func() error {
 		podSpec := r.Parent.Spec.DeepCopy()
+		podSpec.ServiceAccountName = obj.Spec.ServiceAccountName
+
 		for i, c := range podSpec.Containers {
 			if c.Name == "manager" {
 				podSpec.Containers[i].Args = append(podSpec.Containers[i].Args, "--reconciler-name="+obj.GetName())

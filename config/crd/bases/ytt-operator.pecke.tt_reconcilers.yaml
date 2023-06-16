@@ -74,6 +74,12 @@ spec:
                   - name
                   type: object
                 type: array
+              serviceAccountName:
+                description: ServiceAccountName is the name of the service account
+                  to use for the reconciler.
+                type: string
+            required:
+            - serviceAccountName
             type: object
           status:
             description: ReconcilerStatus defines the observed state of Reconciler

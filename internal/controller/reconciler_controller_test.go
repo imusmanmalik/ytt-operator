@@ -124,6 +124,7 @@ func TestReconcilerReconciler(t *testing.T) {
 				Namespace: "default",
 			},
 			Spec: v1alpha1.ReconcilerSpec{
+				ServiceAccountName: "default",
 				For: []metav1.TypeMeta{
 					{
 						Kind:       "Deployment",
